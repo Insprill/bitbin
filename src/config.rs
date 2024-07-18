@@ -121,7 +121,7 @@ impl Default for HttpConfig {
 
 impl Default for MiscConfig {
     fn default() -> Self {
-        MiscConfig { keylength: 6 }
+        MiscConfig { keylength: 7 }
     }
 }
 
