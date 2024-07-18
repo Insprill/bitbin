@@ -1,0 +1,78 @@
+name: Build
+
+on: [ push, pull_request ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x86_64
+          - target: 'x86_64-pc-windows-msvc'
+            os: windows
+          - target: 'x86_64-unknown-linux-gnu'
+            os: ubuntu
+          - target: 'x86_64-unknown-linux-musl'
+            os: ubuntu
+          # aarch64 (armv8)
+          - target: 'aarch64-unknown-linux-gnu'
+            os: ubuntu
+          - target: 'aarch64-unknown-linux-musl'
+            os: ubuntu
+          # armv7
+          - target: 'armv7-unknown-linux-gnueabihf'
+            os: ubuntu
+          - target: 'armv7-unknown-linux-musleabihf'
+            os: ubuntu
+          # armv6
+          - target: 'arm-unknown-linux-gnueabihf'
+            os: ubuntu
+          - target: 'arm-unknown-linux-musleabihf'
+            os: ubuntu
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Cross
+        run: cargo install --git https://github.com/cross-rs/cross cross
+
+      - name: Setup Cache
+        uses: Swatinem/rust-cache@v2
+
+      # cross doesn't support msvc toolchains out-of-the-box (https://github.com/cross-rs/cross-toolchains)
+      - name: Build (Windows)
+        if: matrix.os == 'windows'
+        run: cargo build --release --target=${{ matrix.target }}
+
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu'
+        run: cross build --release --target=${{ matrix.target }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitbin-${{ matrix.target }}
+          if-no-files-found: ignore
+          path: |
+            target/${{ matrix.target }}/release/bitbin
+            target/${{ matrix.target }}/release/bitbin.exe
+
+  code-style:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: Check Clippy
+        run: cargo clippy -- -D warnings
