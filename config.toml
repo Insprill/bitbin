@@ -1,0 +1,13 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+workers = 0
+keep_alive_timeout = 15
+tls = false
+tls_key_file = ""
+tls_cert_file = ""
+
+[bitbin]
+# Maximum size of uploads, in MB
+max_content_length = 10
+key_length = 4
