@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use actix_web::web;
 use anyhow::Result;
-use rusqlite::types::Null;
+use rusqlite::{types::Null, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
 pub type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
@@ -75,24 +75,26 @@ pub async fn save_content_info(
     .await?
 }
 
-pub async fn get_content_info(pool: &Pool, key: String) -> Result<Content> {
+pub async fn get_content_info(pool: &Pool, key: String) -> Result<Option<Content>> {
     let pool = pool.clone();
 
     let conn = web::block(move || pool.get()).await??;
 
     web::block(move || {
         let mut stmt = conn.prepare("SELECT * FROM content WHERE key=:key;")?;
-        Ok(stmt.query_row(&[(":key", &key)], |row| {
-            Ok(Content {
-                key: row.get(0)?,
-                content_type: row.get(1)?,
-                expiry: row.get(2)?,
-                last_modified: row.get(3)?,
-                encoding: row.get(4)?,
-                backend_id: row.get(5)?,
-                content_length: row.get(6)?,
+        Ok(stmt
+            .query_row(&[(":key", &key)], |row| {
+                Ok(Content {
+                    key: row.get(0)?,
+                    content_type: row.get(1)?,
+                    expiry: row.get(2)?,
+                    last_modified: row.get(3)?,
+                    encoding: row.get(4)?,
+                    backend_id: row.get(5)?,
+                    content_length: row.get(6)?,
+                })
             })
-        })?)
+            .optional()?)
     })
     .await?
 }

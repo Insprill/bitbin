@@ -27,10 +27,9 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
     }
 
     let content = match db::get_content_info(&state.pool, key.to_string()).await {
-        Ok(c) => c,
-        Err(err) => {
-            return Err(ErrorInternalServerError(err));
-        }
+        Ok(Some(c)) => c,
+        Ok(None) => return Err(ErrorNotFound("Invalid path")),
+        Err(err) => return Err(ErrorInternalServerError(err)),
     };
 
     let data_path = PathBuf::from("content");
