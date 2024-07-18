@@ -26,7 +26,10 @@ pub async fn post(state: Data<State>, bytes: Bytes) -> Result<impl Responder, Er
     }
 
     let res = Response {
-        key: random_string::generate(state.config.key_length, random_string::charsets::ALPHANUMERIC),
+        key: random_string::generate(
+            state.config.key_length,
+            random_string::charsets::ALPHANUMERIC,
+        ),
     };
 
     let data_path = PathBuf::from("content");

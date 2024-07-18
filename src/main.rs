@@ -16,7 +16,6 @@ use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rustls::{Certificate, PrivateKey, ServerConfig as RustlsServerConfig};
 
-use shadow_rs::shadow;
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode};
 
 use crate::config::Config;
@@ -25,8 +24,6 @@ mod config;
 mod db;
 mod get;
 mod post;
-
-shadow!(build);
 
 pub struct State {
     pool: Pool<SqliteConnectionManager>,
@@ -53,7 +50,7 @@ async fn main() -> Result<()> {
 
     info!(
         "Starting bitbin v{}, listening on {}:{}!",
-        shadow_rs::CARGO_VERSION,
+        env!("CARGO_PKG_VERSION"),
         config.host,
         port
     );
