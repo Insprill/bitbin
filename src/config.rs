@@ -1,16 +1,24 @@
 use anyhow::{bail, Result};
-use std::{fs, path::PathBuf};
+use bitbin::CopyNonDefaults;
+use log::info;
+use std::{fs, path::Path};
 
 use serde::Deserialize;
 
-#[derive(Clone, Deserialize)]
+const CONFIG_PATH: &str = "config.toml";
+
+#[derive(Clone, Deserialize, Default, Debug, CopyNonDefaults)]
+#[serde(default)]
 pub struct Config {
-    pub server: ServerConfig,
-    pub bitbin: BitbinConfig,
+    //#[serde_inline_default(ServerConfig::default())]
+    pub http: HttpConfig,
+    pub misc: MiscConfig,
+    pub content: ContentConfig,
 }
 
-#[derive(Clone, Deserialize)]
-pub struct ServerConfig {
+#[derive(Clone, Deserialize, Debug, PartialEq, CopyNonDefaults)]
+#[serde(default)]
+pub struct HttpConfig {
     /// Sets the address to listen on
     pub host: String,
 
@@ -33,49 +41,92 @@ pub struct ServerConfig {
     pub tls_cert_file: Option<String>,
 }
 
-#[derive(Clone, Copy, Deserialize)]
-pub struct BitbinConfig {
-    /// Max content length in MB
-    pub max_content_length: usize,
+#[derive(Clone, Copy, Deserialize, Debug, PartialEq, CopyNonDefaults)]
+#[serde(default)]
+pub struct MiscConfig {
     /// The length of generated keys in characters
-    pub key_length: usize,
+    pub keylength: usize,
+}
+
+#[derive(Clone, Copy, Deserialize, Debug, PartialEq, CopyNonDefaults)]
+#[serde(default)]
+pub struct ContentConfig {
+    /// Max content length in MB
+    pub maxsize: usize,
 }
 
 impl Config {
     pub fn create() -> Result<Config> {
-        if !PathBuf::from("config.toml").exists() {
-            return Ok(Config::default());
+        let (mut http, mut misc, mut content) = Self::from_env("BYTEBIN");
+        let (b_http, b_misc, b_content) = Self::from_env("BITBIN");
+
+        http.copy_non_defaults(&b_http);
+        misc.copy_non_defaults(&b_misc);
+        content.copy_non_defaults(&b_content);
+
+        let config_path = Path::new(CONFIG_PATH);
+        if !config_path.exists() {
+            info!("No config found at {}!", config_path.to_string_lossy());
+            return Ok(Config {
+                http,
+                misc,
+                content,
+            });
         }
 
-        let raw_config = fs::read_to_string("config.toml")?;
-
-        let config: Config = match toml::from_str(&raw_config) {
+        let config_str = fs::read_to_string(CONFIG_PATH)?;
+        let mut config: Config = match toml::from_str(&config_str) {
             Ok(cfg) => cfg,
             Err(err) => {
                 bail!("Failed to read config file! {}", err);
             }
         };
 
+        config.http.copy_non_defaults(&http);
+        config.misc.copy_non_defaults(&misc);
+        config.content.copy_non_defaults(&content);
+
         Ok(config)
+    }
+
+    fn from_env(prefix: &str) -> (HttpConfig, MiscConfig, ContentConfig) {
+        let http = envy::prefixed(format!("{}_HTTP_", prefix))
+            .from_env::<HttpConfig>()
+            .unwrap_or_default();
+        let misc = envy::prefixed(format!("{}_MISC_", prefix))
+            .from_env::<MiscConfig>()
+            .unwrap_or_default();
+        let content = envy::prefixed(format!("{}_CONTENT_", prefix))
+            .from_env::<ContentConfig>()
+            .unwrap_or_default();
+        (http, misc, content)
     }
 }
 
-impl Default for Config {
+// Keep the defaults in sync with config.toml and .env.example!
+
+impl Default for HttpConfig {
     fn default() -> Self {
-        Config {
-            server: ServerConfig {
-                host: "0.0.0.0".to_string(),
-                port: 8080,
-                workers: 0,
-                keep_alive_timeout: 15.0,
-                tls: false,
-                tls_key_file: Option::None,
-                tls_cert_file: Option::None,
-            },
-            bitbin: BitbinConfig {
-                max_content_length: 10,
-                key_length: 6,
-            },
+        HttpConfig {
+            host: "0.0.0.0".to_string(),
+            port: 8080,
+            workers: 0,
+            keep_alive_timeout: 15.0,
+            tls: false,
+            tls_key_file: Option::None,
+            tls_cert_file: Option::None,
         }
+    }
+}
+
+impl Default for MiscConfig {
+    fn default() -> Self {
+        MiscConfig { keylength: 6 }
+    }
+}
+
+impl Default for ContentConfig {
+    fn default() -> Self {
+        ContentConfig { maxsize: 10 }
     }
 }

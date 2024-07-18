@@ -21,13 +21,13 @@ pub async fn post(state: Data<State>, bytes: Bytes) -> Result<impl Responder, Er
 
     let len = bytes.len();
 
-    if len > state.config.max_content_length * MB_LEN {
+    if len > state.config.content.maxsize * MB_LEN {
         return Err(ErrorPayloadTooLarge("Content too large"));
     }
 
     let res = Response {
         key: random_string::generate(
-            state.config.key_length,
+            state.config.misc.keylength,
             random_string::charsets::ALPHANUMERIC,
         ),
     };

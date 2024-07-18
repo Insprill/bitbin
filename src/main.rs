@@ -10,7 +10,7 @@ use std::{
 
 use actix_web::{middleware, web::Data, App, HttpServer};
 use anyhow::Result;
-use config::{BitbinConfig, ServerConfig};
+use config::HttpConfig;
 use log::{error, info, warn, LevelFilter};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -27,7 +27,7 @@ mod post;
 
 pub struct State {
     pool: Pool<SqliteConnectionManager>,
-    config: BitbinConfig,
+    config: Config,
 }
 
 #[actix_web::main]
@@ -40,19 +40,20 @@ async fn main() -> Result<()> {
     )])
     .unwrap();
 
-    let root_config = Config::create()?;
-    let config = root_config.server;
+    if let Ok(path) = dotenvy::dotenv() {
+        info!(
+            "Loaded environment variables from {}",
+            path.to_string_lossy()
+        );
+    }
 
-    let port = std::env::var("PORT")
-        .unwrap_or_else(|_| config.port.to_string())
-        .parse::<u16>()
-        .unwrap();
+    let config = Config::create()?;
 
     info!(
         "Starting bitbin v{}, listening on {}:{}!",
         env!("CARGO_PKG_VERSION"),
-        config.host,
-        port
+        config.http.host,
+        config.http.port
     );
 
     let db_dir = PathBuf::from("db");
@@ -66,7 +67,7 @@ async fn main() -> Result<()> {
 
     let data = Data::new(State {
         pool,
-        config: root_config.bitbin,
+        config: config.clone(),
     });
 
     let mut server = HttpServer::new(move || {
@@ -78,22 +79,25 @@ async fn main() -> Result<()> {
             .service(get::get)
     });
 
-    if config.keep_alive_timeout > 0.0 {
-        server = server.keep_alive(Duration::from_secs_f32(config.keep_alive_timeout));
+    if config.http.keep_alive_timeout > 0.0 {
+        server = server.keep_alive(Duration::from_secs_f32(config.http.keep_alive_timeout));
     } else {
         server = server.keep_alive(None)
     }
 
-    if config.workers > 0 {
-        server = server.workers(config.workers);
+    if config.http.workers > 0 {
+        server = server.workers(config.http.workers);
     }
 
-    let _ = if config.tls {
+    let _ = if config.http.tls {
         // To create a self-signed temporary cert for testing:
         // openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj '/CN=localhost'
-        server.bind_rustls_021((config.host.to_owned(), port), build_tls_config(&config)?)
+        server.bind_rustls_021(
+            (config.http.host.to_owned(), config.http.port),
+            build_tls_config(&config.http)?,
+        )
     } else {
-        server.bind_auto_h2c((config.host, port))
+        server.bind_auto_h2c((config.http.host, config.http.port))
     }?
     .run()
     .await;
@@ -101,7 +105,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn build_tls_config(config: &ServerConfig) -> std::io::Result<RustlsServerConfig> {
+fn build_tls_config(config: &HttpConfig) -> std::io::Result<RustlsServerConfig> {
     Ok(RustlsServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth()
@@ -109,7 +113,7 @@ fn build_tls_config(config: &ServerConfig) -> std::io::Result<RustlsServerConfig
         .unwrap())
 }
 
-fn create_cert_chain(config: &ServerConfig) -> Vec<Certificate> {
+fn create_cert_chain(config: &HttpConfig) -> Vec<Certificate> {
     let cert_file_path = config.tls_cert_file.as_ref().unwrap();
     let cert_file = &mut BufReader::new(match File::open(cert_file_path) {
         Ok(file) => file,
@@ -131,7 +135,7 @@ fn create_cert_chain(config: &ServerConfig) -> Vec<Certificate> {
     cert_chain
 }
 
-fn create_key(config: &ServerConfig) -> Vec<u8> {
+fn create_key(config: &HttpConfig) -> Vec<u8> {
     let key_file_path = config.tls_key_file.as_ref().unwrap();
     let key_file = &mut BufReader::new(match File::open(key_file_path) {
         Ok(file) => file,
