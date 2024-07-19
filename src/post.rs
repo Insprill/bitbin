@@ -32,18 +32,16 @@ pub async fn post(
         .unwrap_or("text/plain")
         .to_string();
 
-    let res = Response {
-        key: random_string::generate(
-            state.config.misc.keylength,
-            random_string::charsets::ALPHANUMERIC,
-        ),
-    };
+    let key = random_string::generate(
+        state.config.misc.keylength,
+        random_string::charsets::ALPHANUMERIC,
+    );
 
-    state.storage.save_content(&res.key, bytes)?;
+    state.storage.save_content(&key, bytes)?;
 
     if let Err(err) = db::save_content_info(
         &state.pool,
-        res.key.clone(),
+        key.clone(),
         content_type,
         state.storage.backend_id(),
         len,
@@ -53,12 +51,13 @@ pub async fn post(
         return Err(ErrorInternalServerError(err));
     };
 
+    let res = Response { key: &key };
     Ok(HttpResponse::Created()
-        .insert_header(("Location", res.key.clone()))
+        .insert_header(("Location", res.key))
         .json(res))
 }
 
 #[derive(Serialize)]
-pub struct Response {
-    key: String,
+pub struct Response<'a> {
+    key: &'a str,
 }
