@@ -9,7 +9,7 @@ use std::{
     time::Duration,
 };
 
-use actix_web::{middleware, web::Data, App, HttpServer};
+use actix_web::{http::StatusCode, middleware, web::Data, App, HttpServer};
 use anyhow::Result;
 use config::HttpConfig;
 use log::{error, info, warn, LevelFilter};
@@ -24,6 +24,7 @@ use crate::{config::Config, storage::LocalStorage};
 
 mod config;
 mod db;
+mod errors;
 mod get;
 mod post;
 mod storage;
@@ -78,6 +79,10 @@ async fn main() -> Result<()> {
     let mut server = HttpServer::new(move || {
         App::new()
             .app_data(data.clone())
+            .wrap(
+                middleware::ErrorHandlers::new()
+                    .handler(StatusCode::INTERNAL_SERVER_ERROR, errors::handle_500),
+            )
             .wrap(middleware::Compress::default())
             // Routes
             .service(post::post)
