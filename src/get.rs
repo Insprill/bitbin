@@ -30,10 +30,17 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
         Err(err) => return Err(ErrorInternalServerError(err)),
     };
 
+    // Once we have support for modifying existing content, we'll have to return the following
+    // header for modifiable content, while returning the current one for static content.
+    // public, no-cache, proxy-revalidate, no-transform
+    // https://github.com/lucko/bytebin/blob/9ac4aef610c3aa6215f17c7af78568908659d7b6/src/main/java/me/lucko/bytebin/http/GetHandler.java#L100-L114
+    let cache_control = "public, max-age=604800, no-transform, immutable";
+
     let content_data = state.storage.get_content(key)?;
 
     Ok(HttpResponse::Ok()
         .insert_header(("Last-Modified", content.last_modified))
         .insert_header(("Content-Type", content.content_type))
+        .insert_header(("Cache-Control", cache_control))
         .body(content_data))
 }
