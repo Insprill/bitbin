@@ -17,9 +17,6 @@ RUN export $(cat .env | xargs) && cargo build --release
 ####################################################################################################
 FROM alpine:latest
 
-RUN addgroup -S bitbin && adduser -S -G bitbin bitbin
-USER bitbin
-
 WORKDIR /opt/bitbin
 COPY --from=builder /bitbin/target/release/bitbin .
 
