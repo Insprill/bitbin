@@ -37,6 +37,13 @@ pub struct State {
 
 #[actix_web::main]
 async fn main() -> Result<()> {
+    if let Err(err) = start().await {
+        error!("{:?}", err);
+    }
+    Ok(())
+}
+
+async fn start() -> Result<()> {
     CombinedLogger::init(vec![TermLogger::new(
         LevelFilter::Info,
         simplelog::Config::default(),
