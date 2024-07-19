@@ -4,7 +4,7 @@ use actix_web::{
     error::{ErrorBadRequest, ErrorInternalServerError, ErrorPayloadTooLarge},
     post,
     web::{Bytes, Data},
-    Error, HttpResponse, Responder,
+    Error, HttpMessage, HttpRequest, HttpResponse, Responder,
 };
 use anyhow::Result;
 use serde::Serialize;
@@ -14,7 +14,11 @@ use crate::{db, State};
 const MB_LEN: usize = 1024 * 1024;
 
 #[post("/post")]
-pub async fn post(state: Data<State>, bytes: Bytes) -> Result<impl Responder, Error> {
+pub async fn post(
+    state: Data<State>,
+    req: HttpRequest,
+    bytes: Bytes,
+) -> Result<impl Responder, Error> {
     if bytes.is_empty() {
         return Err(ErrorBadRequest("Missing content"));
     }
@@ -24,6 +28,11 @@ pub async fn post(state: Data<State>, bytes: Bytes) -> Result<impl Responder, Er
     if len > state.config.content.maxsize * MB_LEN {
         return Err(ErrorPayloadTooLarge("Content too large"));
     }
+
+    let content_type = Some(req.content_type())
+        .filter(|x| !x.is_empty())
+        .unwrap_or("text/plain")
+        .to_string();
 
     let res = Response {
         key: random_string::generate(
@@ -45,10 +54,9 @@ pub async fn post(state: Data<State>, bytes: Bytes) -> Result<impl Responder, Er
 
     fs::write(data_path, bytes)?;
 
-    match db::save_content_info(&state.pool, res.key.clone(), "".to_string(), len).await {
+    match db::save_content_info(&state.pool, res.key.clone(), content_type, len).await {
         Ok(_) => {}
         Err(err) => {
-            log::info!("shit broke");
             return Err(ErrorInternalServerError(err));
         }
     };

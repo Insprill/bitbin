@@ -43,5 +43,6 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
 
     Ok(HttpResponse::Ok()
         .insert_header(("Last-Modified", content.last_modified))
+        .insert_header(("Content-Type", content.content_type))
         .body(content_data))
 }
