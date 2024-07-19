@@ -7,6 +7,7 @@ use actix_web::{
 };
 
 pub trait StorageBackend {
+    fn backend_id(&self) -> &'static str;
     fn save_content(&self, key: &str, bytes: Bytes) -> Result<()>;
     fn get_content(&self, key: &str) -> Result<Bytes>;
 }
@@ -23,6 +24,10 @@ impl LocalStorage {
 }
 
 impl StorageBackend for LocalStorage {
+    fn backend_id(&self) -> &'static str {
+        "local"
+    }
+
     fn save_content(&self, key: &str, bytes: Bytes) -> Result<()> {
         if !self.path.exists() {
             fs::create_dir(&self.path)?;

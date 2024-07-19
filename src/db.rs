@@ -39,6 +39,7 @@ pub async fn save_content_info(
     pool: &Pool,
     key: String,
     content_type: String,
+    backend_id: &'static str,
     content_length: usize,
 ) -> Result<usize> {
     let pool = pool.clone();
@@ -67,7 +68,7 @@ pub async fn save_content_info(
                 Null, // We don't support expiration
                 curr_time,
                 "identity", // We don't compress anything
-                "local",    // We only support local
+                backend_id,
                 content_length,
             ),
         )?)

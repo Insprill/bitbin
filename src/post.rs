@@ -41,11 +41,16 @@ pub async fn post(
 
     state.storage.save_content(&res.key, bytes)?;
 
-    match db::save_content_info(&state.pool, res.key.clone(), content_type, len).await {
-        Ok(_) => {}
-        Err(err) => {
-            return Err(ErrorInternalServerError(err));
-        }
+    if let Err(err) = db::save_content_info(
+        &state.pool,
+        res.key.clone(),
+        content_type,
+        state.storage.backend_id(),
+        len,
+    )
+    .await
+    {
+        return Err(ErrorInternalServerError(err));
     };
 
     Ok(HttpResponse::Created()
