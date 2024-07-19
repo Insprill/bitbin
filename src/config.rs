@@ -1,6 +1,5 @@
 use anyhow::{bail, Result};
 use bitbin::CopyNonDefaults;
-use log::info;
 use std::{fs, path::Path};
 
 use serde::Deserialize;
@@ -57,8 +56,8 @@ pub struct ContentConfig {
 
 impl Config {
     pub fn create() -> Result<Config> {
-        let (mut http, mut misc, mut content) = Self::from_env("BYTEBIN");
-        let (b_http, b_misc, b_content) = Self::from_env("BITBIN");
+        let (mut http, mut misc, mut content) = Self::from_env("BYTEBIN")?;
+        let (b_http, b_misc, b_content) = Self::from_env("BITBIN")?;
 
         http.copy_non_defaults(&b_http);
         misc.copy_non_defaults(&b_misc);
@@ -66,7 +65,6 @@ impl Config {
 
         let config_path = Path::new(CONFIG_PATH);
         if !config_path.exists() {
-            info!("No config found at {}!", config_path.to_string_lossy());
             return Ok(Config {
                 http,
                 misc,
@@ -89,17 +87,11 @@ impl Config {
         Ok(config)
     }
 
-    fn from_env(prefix: &str) -> (HttpConfig, MiscConfig, ContentConfig) {
-        let http = envy::prefixed(format!("{}_HTTP_", prefix))
-            .from_env::<HttpConfig>()
-            .unwrap_or_default();
-        let misc = envy::prefixed(format!("{}_MISC_", prefix))
-            .from_env::<MiscConfig>()
-            .unwrap_or_default();
-        let content = envy::prefixed(format!("{}_CONTENT_", prefix))
-            .from_env::<ContentConfig>()
-            .unwrap_or_default();
-        (http, misc, content)
+    fn from_env(prefix: &str) -> Result<(HttpConfig, MiscConfig, ContentConfig)> {
+        let http = envy::prefixed(format!("{}_HTTP_", prefix)).from_env::<HttpConfig>()?;
+        let misc = envy::prefixed(format!("{}_MISC_", prefix)).from_env::<MiscConfig>()?;
+        let content = envy::prefixed(format!("{}_CONTENT_", prefix)).from_env::<ContentConfig>()?;
+        Ok((http, misc, content))
     }
 }
 
