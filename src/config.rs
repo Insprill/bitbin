@@ -52,6 +52,7 @@ pub struct MiscConfig {
 pub struct ContentConfig {
     /// Max content length in MB
     pub maxsize: usize,
+    pub gzip_compression_level: u32,
 }
 
 impl Config {
@@ -119,6 +120,9 @@ impl Default for MiscConfig {
 
 impl Default for ContentConfig {
     fn default() -> Self {
-        ContentConfig { maxsize: 10 }
+        ContentConfig {
+            maxsize: 10,
+            gzip_compression_level: 1,
+        }
     }
 }

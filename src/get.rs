@@ -1,12 +1,23 @@
 use actix_web::{
-    error::{ErrorInternalServerError, ErrorNotFound},
+    error::{ErrorInternalServerError, ErrorNotAcceptable, ErrorNotFound},
     get,
-    web::Data,
+    http::header::{self, ContentEncoding},
+    web::{self, Bytes, Data},
     Error, HttpRequest, HttpResponse, Responder,
 };
 use anyhow::Result;
+use flate2::read::GzDecoder;
+use log::warn;
+use std::io::prelude::*;
 
-use crate::{db, State};
+use crate::{
+    db::{self, Content},
+    State,
+};
+
+const CACHE_CONTROL_STATIC: &str = "public, max-age=604800, no-transform, immutable";
+#[allow(dead_code)]
+const CACHE_CONTROL_DYNAMIC: &str = "public, no-cache, proxy-revalidate, no-transform";
 
 #[get("/{key}")]
 pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder, Error> {
@@ -28,23 +39,81 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
         Err(err) => return Err(ErrorInternalServerError(err)),
     };
 
-    // Once we have support for modifying existing content, we'll have to return the following
-    // header for modifiable content, while returning the current one for static content.
-    // public, no-cache, proxy-revalidate, no-transform
+    // Once we have support for modifying existing content, we'll have to return the dynamic
+    // variant of this for modifiable content, while returning the current one for static content.
     // https://github.com/lucko/bytebin/blob/9ac4aef610c3aa6215f17c7af78568908659d7b6/src/main/java/me/lucko/bytebin/http/GetHandler.java#L100-L114
-    let cache_control = "public, max-age=604800, no-transform, immutable";
+    let cache_control = CACHE_CONTROL_STATIC;
 
     let content_data = state.storage.get_content(key)?;
 
-    Ok(HttpResponse::Ok()
-        .insert_header(("Last-Modified", content.last_modified))
-        .insert_header(("Content-Type", content.content_type))
-        .insert_header(("Cache-Control", cache_control))
-        .body(content_data))
+    let mut res = HttpResponse::Ok();
+    res.insert_header((header::LAST_MODIFIED, content.last_modified));
+    res.insert_header((header::CONTENT_TYPE, content.content_type.clone()));
+    res.insert_header((header::CACHE_CONTROL, cache_control));
+
+    let accept_encoding = get_accepted_encoding(&req);
+    if accepts_encoding(&content, &accept_encoding) {
+        return Ok(res
+            .insert_header((header::CONTENT_ENCODING, content.encoding))
+            .body(content_data));
+    }
+
+    if content.encoding == ContentEncoding::Gzip.as_str() {
+        warn!("[REQUEST] Request for 'key = {}' was made with incompatible Accept-Encoding headers! Content-Encoding = {}, Accept-Encoding = {}", key, content.encoding, accept_encoding);
+        let content_data = web::block(move || {
+            let mut gz = GzDecoder::new(content_data.as_slice());
+            let mut s = Vec::new();
+            match gz.read_to_end(&mut s) {
+                Ok(_) => Ok(s),
+                Err(err) => Err(err),
+            }
+        })
+        .await??;
+        return Ok(res
+            .insert_header((header::CONTENT_ENCODING, ContentEncoding::Identity.as_str()))
+            .body(Bytes::from(content_data)));
+    }
+
+    Err(ErrorNotAcceptable(format!(
+        "Accept-Encoding \"{}\" does not contain Content-Encoding \"{}\"",
+        accept_encoding, content.encoding
+    )))
 }
 
 fn validate_path(path: &str) -> bool {
     return path.chars().all(|c| c.is_ascii_alphanumeric());
+}
+
+fn get_accepted_encoding(req: &HttpRequest) -> String {
+    match req
+        .headers()
+        .get(header::ACCEPT_ENCODING)
+        .and_then(|h| h.to_str().ok())
+    {
+        Some(accept_encoding) => {
+            format!("{},{}", ContentEncoding::Identity.as_str(), accept_encoding)
+        }
+        None => ContentEncoding::Identity.as_str().to_string(),
+    }
+}
+
+fn accepts_encoding(content: &Content, accept_encoding: &str) -> bool {
+    if !accept_encoding.contains('*') {
+        let accept_encodings: Vec<&str> = accept_encoding
+            .split(',')
+            .filter_map(|t| t.split(';').next())
+            .map(|e| e.trim())
+            .collect::<Vec<&str>>();
+        if !content
+            .encoding
+            .split(',')
+            .all(|ce| accept_encodings.contains(&ce) || ce == ContentEncoding::Identity.as_str())
+        {
+            return false;
+        }
+    }
+
+    true
 }
 
 #[cfg(test)]

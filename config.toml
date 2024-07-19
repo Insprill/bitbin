@@ -14,3 +14,4 @@ keylength = 6
 [content]
 # Maximum size of uploads, in MB
 maxsize = 10
+gzip_compression_level = 1

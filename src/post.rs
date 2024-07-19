@@ -1,11 +1,15 @@
 use actix_web::{
     error::{ErrorBadRequest, ErrorInternalServerError, ErrorPayloadTooLarge},
+    http::header::{self, ContentEncoding},
     post,
-    web::{Bytes, Data},
+    web::{self, Bytes, Data},
     Error, HttpMessage, HttpRequest, HttpResponse, Responder,
 };
 use anyhow::Result;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use serde::Serialize;
+use std::io::prelude::*;
 
 use crate::{db, State};
 
@@ -37,12 +41,48 @@ pub async fn post(
         random_string::charsets::ALPHANUMERIC,
     );
 
+    // ah sweet, man-made horros beyond my comprehension
+    let mut content_encoding = req
+        .headers()
+        .get(header::CONTENT_ENCODING)
+        .and_then(|h| h.to_str().ok())
+        .map(|t| {
+            t.split(',')
+                .filter_map(|t| {
+                    t.split(';').next().map(|x| {
+                        if x == "x-gzip" {
+                            ContentEncoding::Gzip.as_str().to_string()
+                        } else {
+                            x.trim().to_string()
+                        }
+                    })
+                })
+                .collect::<Vec<String>>()
+        })
+        .unwrap_or_default();
+
+    let mut bytes: Vec<u8> = bytes.into();
+
+    let compression_level = state.config.content.gzip_compression_level;
+    if content_encoding.is_empty() {
+        bytes = web::block(move || {
+            let mut gz = GzEncoder::new(Vec::new(), Compression::new(compression_level));
+            match gz.write_all(&bytes) {
+                Ok(_) => Ok(gz.finish()),
+                Err(err) => Err(err),
+            }
+        })
+        .await???;
+        content_encoding = vec![ContentEncoding::Gzip.as_str().to_string()];
+    }
+
     state.storage.save_content(&key, bytes)?;
 
     if let Err(err) = db::save_content_info(
         &state.pool,
         key.clone(),
         content_type,
+        content_encoding,
         state.storage.backend_id(),
         len,
     )

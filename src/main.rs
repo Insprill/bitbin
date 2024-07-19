@@ -90,7 +90,6 @@ async fn start() -> Result<()> {
                 middleware::ErrorHandlers::new()
                     .handler(StatusCode::INTERNAL_SERVER_ERROR, errors::handle_500),
             )
-            .wrap(middleware::Compress::default())
             // Routes
             .service(post::post)
             .service(get::get)

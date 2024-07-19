@@ -10,10 +10,11 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-actix-web = { version = "4", default-features = false, features = ["macros", "compress-brotli", "compress-gzip", "http2", "rustls-0_21"] } # Zstd doesn't compile on aarch64 musl :/
+actix-web = { version = "4", default-features = false, features = ["macros", "http2", "rustls-0_21"] } # Zstd doesn't compile on aarch64 musl :/
 anyhow = "1"
 dotenvy = "0.15"
 envy = "0.4"
+flate2 = "1"
 log = "0.4"
 quote = "1"
 r2d2 = "0.8"

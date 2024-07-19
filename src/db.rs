@@ -39,6 +39,7 @@ pub async fn save_content_info(
     pool: &Pool,
     key: String,
     content_type: String,
+    content_encoding: Vec<String>,
     backend_id: &'static str,
     content_length: usize,
 ) -> Result<usize> {
@@ -67,7 +68,7 @@ pub async fn save_content_info(
                 content_type,
                 Null, // We don't support expiration
                 curr_time,
-                "identity", // We don't compress anything
+                content_encoding.join(","),
                 backend_id,
                 content_length,
             ),
