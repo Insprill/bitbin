@@ -5,11 +5,8 @@ use actix_web::{
     Error, HttpRequest, HttpResponse, Responder,
 };
 use anyhow::Result;
-use lazy_regex::*;
 
 use crate::{db, State};
-
-pub static VALID_KEY_PATTERN: Lazy<Regex> = lazy_regex!("^[a-zA-Z0-9]*$");
 
 #[get("/{key}")]
 pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder, Error> {
@@ -20,7 +17,8 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
         }
     };
 
-    if key.contains('.') || !VALID_KEY_PATTERN.is_match(key) {
+    // This is responsible for preventing path-traversal!
+    if !validate_path(key) {
         return Err(ErrorNotFound("Invalid path"));
     }
 
@@ -43,4 +41,21 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
         .insert_header(("Content-Type", content.content_type))
         .insert_header(("Cache-Control", cache_control))
         .body(content_data))
+}
+
+fn validate_path(path: &str) -> bool {
+    return path.chars().all(|c| c.is_ascii_alphanumeric());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_path_test() {
+        assert!(validate_path("abc123"));
+        assert!(!validate_path("..abc"));
+        assert!(!validate_path("../abc"));
+        assert!(!validate_path("abc/def"));
+    }
 }
