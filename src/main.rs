@@ -5,6 +5,7 @@ use std::{
     io::BufReader,
     path::PathBuf,
     process::exit,
+    sync::Arc,
     time::Duration,
 };
 
@@ -17,17 +18,20 @@ use r2d2_sqlite::SqliteConnectionManager;
 use rustls::{Certificate, PrivateKey, ServerConfig as RustlsServerConfig};
 
 use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode};
+use storage::StorageBackend;
 
-use crate::config::Config;
+use crate::{config::Config, storage::LocalStorage};
 
 mod config;
 mod db;
 mod get;
 mod post;
+mod storage;
 
 pub struct State {
     pool: Pool<SqliteConnectionManager>,
     config: Config,
+    storage: Arc<dyn StorageBackend + Sync + Send>,
 }
 
 #[actix_web::main]
@@ -68,6 +72,7 @@ async fn main() -> Result<()> {
     let data = Data::new(State {
         pool,
         config: config.clone(),
+        storage: Arc::new(LocalStorage::new(PathBuf::from("content"))),
     });
 
     let mut server = HttpServer::new(move || {

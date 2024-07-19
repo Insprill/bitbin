@@ -1,5 +1,3 @@
-use std::{fs, path::PathBuf};
-
 use actix_web::{
     error::{ErrorInternalServerError, ErrorNotFound},
     get,
@@ -32,14 +30,7 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
         Err(err) => return Err(ErrorInternalServerError(err)),
     };
 
-    let data_path = PathBuf::from("content");
-
-    let data_path = data_path.join(key);
-    if !data_path.exists() {
-        return Err(ErrorNotFound("Invalid path"));
-    }
-
-    let content_data = fs::read_to_string(data_path)?;
+    let content_data = state.storage.get_content(key)?;
 
     Ok(HttpResponse::Ok()
         .insert_header(("Last-Modified", content.last_modified))

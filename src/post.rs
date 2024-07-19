@@ -1,5 +1,3 @@
-use std::{fs, path::PathBuf};
-
 use actix_web::{
     error::{ErrorBadRequest, ErrorInternalServerError, ErrorPayloadTooLarge},
     post,
@@ -41,18 +39,7 @@ pub async fn post(
         ),
     };
 
-    let data_path = PathBuf::from("content");
-
-    if !data_path.exists() {
-        let _ = fs::create_dir(&data_path);
-    }
-
-    let data_path = data_path.join(&res.key);
-    if data_path.exists() {
-        return Err(ErrorInternalServerError("Key already used"));
-    }
-
-    fs::write(data_path, bytes)?;
+    state.storage.save_content(&res.key, bytes)?;
 
     match db::save_content_info(&state.pool, res.key.clone(), content_type, len).await {
         Ok(_) => {}
