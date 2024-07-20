@@ -12,6 +12,7 @@ proc-macro = true
 [dependencies]
 actix-web = { version = "4", default-features = false, features = ["macros", "http2", "rustls-0_21"] } # Zstd doesn't compile on aarch64 musl :/
 anyhow = "1"
+bytes = "1"
 dotenvy = "0.15"
 envy = "0.4"
 flate2 = "1"

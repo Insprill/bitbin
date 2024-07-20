@@ -23,6 +23,7 @@ use storage::StorageBackend;
 use crate::{config::Config, storage::LocalStorage};
 
 mod config;
+mod data;
 mod db;
 mod errors;
 mod get;

@@ -44,7 +44,7 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
     // https://github.com/lucko/bytebin/blob/9ac4aef610c3aa6215f17c7af78568908659d7b6/src/main/java/me/lucko/bytebin/http/GetHandler.java#L100-L114
     let cache_control = CACHE_CONTROL_STATIC;
 
-    let content_data = state.storage.get_content(key)?;
+    let content_data = state.storage.get_content(key)?.content.unwrap();
 
     let mut res = HttpResponse::Ok();
     res.insert_header((header::LAST_MODIFIED, content.last_modified));
@@ -54,12 +54,12 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
     let accept_encoding = get_accepted_encoding(&req);
     if accepts_encoding(&content, &accept_encoding) {
         return Ok(res
-            .insert_header((header::CONTENT_ENCODING, content.encoding))
+            .insert_header((header::CONTENT_ENCODING, content.content_encoding))
             .body(content_data));
     }
 
-    if content.encoding == ContentEncoding::Gzip.as_str() {
-        warn!("[REQUEST] Request for 'key = {}' was made with incompatible Accept-Encoding headers! Content-Encoding = {}, Accept-Encoding = {}", key, content.encoding, accept_encoding);
+    if content.content_encoding == ContentEncoding::Gzip.as_str() {
+        warn!("[REQUEST] Request for 'key = {}' was made with incompatible Accept-Encoding headers! Content-Encoding = {}, Accept-Encoding = {}", key, content.content_encoding, accept_encoding);
         let content_data = web::block(move || {
             let mut gz = GzDecoder::new(content_data.as_slice());
             let mut s = Vec::new();
@@ -76,7 +76,7 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
 
     Err(ErrorNotAcceptable(format!(
         "Accept-Encoding \"{}\" does not contain Content-Encoding \"{}\"",
-        accept_encoding, content.encoding
+        accept_encoding, content.content_encoding
     )))
 }
 
@@ -105,7 +105,7 @@ fn accepts_encoding(content: &Content, accept_encoding: &str) -> bool {
             .map(|e| e.trim())
             .collect::<Vec<&str>>();
         if !content
-            .encoding
+            .content_encoding
             .split(',')
             .all(|ce| accept_encodings.contains(&ce) || ce == ContentEncoding::Identity.as_str())
         {

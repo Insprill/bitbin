@@ -9,9 +9,12 @@ use anyhow::Result;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use serde::Serialize;
-use std::io::prelude::*;
+use std::{io::prelude::*, time::SystemTime};
 
-use crate::{db, State};
+use crate::{
+    db::{self, Content},
+    State,
+};
 
 const MB_LEN: usize = 1024 * 1024;
 
@@ -76,20 +79,34 @@ pub async fn post(
         content_encoding = vec![ContentEncoding::Gzip.as_str().to_string()];
     }
 
-    state.storage.save_content(&key, bytes)?;
+    let last_modified: i64 = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_err(ErrorInternalServerError)?
+        .as_millis()
+        .try_into()
+        .map_err(ErrorInternalServerError)?;
 
-    if let Err(err) = db::save_content_info(
-        &state.pool,
-        key.clone(),
+    let content = Content {
+        key: key.clone(),
         content_type,
-        content_encoding,
-        state.storage.backend_id(),
-        len,
-    )
-    .await
-    {
+        expiry: None, // Not supported (yet)
+        last_modified,
+        modifiable: false, // Not supported (yet)
+        auth_key: None,
+        content_encoding: content_encoding.join(","),
+        backend_id: state.storage.backend_id().to_string(),
+        content_length: bytes.len(),
+        content: Some(bytes),
+    };
+
+    if let Err(err) = db::save_content_info(&state.pool, &content).await {
         return Err(ErrorInternalServerError(err));
     };
+
+    if let Err(err) = state.storage.save_content(content) {
+        //db::delete_content_info();
+        return Err(ErrorInternalServerError(err));
+    }
 
     let res = Response { key: &key };
     Ok(HttpResponse::Created()

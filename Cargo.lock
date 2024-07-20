@@ -272,6 +272,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "anyhow",
+ "bytes",
  "dotenvy",
  "envy",
  "flate2",
