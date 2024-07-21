@@ -44,7 +44,7 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
     // https://github.com/lucko/bytebin/blob/9ac4aef610c3aa6215f17c7af78568908659d7b6/src/main/java/me/lucko/bytebin/http/GetHandler.java#L100-L114
     let cache_control = CACHE_CONTROL_STATIC;
 
-    let content_data = state.storage.get_content(key)?.content.unwrap();
+    let content_data = state.storage.get_content(key, false)?.content.unwrap();
 
     let mut res = HttpResponse::Ok();
     res.insert_header((header::LAST_MODIFIED, content.last_modified));

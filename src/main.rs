@@ -10,9 +10,9 @@ use std::{
 };
 
 use actix_web::{http::StatusCode, middleware, web::Data, App, HttpServer};
-use anyhow::Result;
+use anyhow::{bail, Result};
 use config::HttpConfig;
-use log::{error, info, warn, LevelFilter};
+use log::{debug, error, info, warn, LevelFilter};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rustls::{Certificate, PrivateKey, ServerConfig as RustlsServerConfig};
@@ -69,19 +69,52 @@ async fn start() -> Result<()> {
         config.http.port
     );
 
+    let storage = LocalStorage::new(PathBuf::from("content"));
+    if let Err(err) = storage.initialize() {
+        bail!(
+            "Failed to initialze {} storage: {}",
+            storage.backend_id(),
+            err
+        );
+    }
+
     let db_dir = PathBuf::from("db");
     if !db_dir.exists() {
-        let _ = fs::create_dir(db_dir);
+        fs::create_dir(&db_dir)?;
     }
-    let manager = SqliteConnectionManager::file("db/bitbin.db");
+
+    let db_path = db_dir.join("bitbin.db");
+    let new_db = !db_path.exists();
+
+    let manager = SqliteConnectionManager::file(db_path);
     let pool = Pool::new(manager).unwrap();
 
-    let _ = db::create_db(pool.get()?);
+    if new_db {
+        let _ = db::create_db(pool.get()?);
+
+        let all_content = match storage.list_all_content() {
+            Ok(all_content) => all_content,
+            Err(err) => {
+                error!("Failed to get content to recreate database! {}", err);
+                Vec::new()
+            }
+        };
+
+        for content in all_content {
+            match db::save_content_info(&pool, &content).await {
+                Ok(_) => debug!("Added existing paste {} to the database.", content.key),
+                Err(err) => error!(
+                    "Failed to add existing paste {} to the database: {}",
+                    content.key, err
+                ),
+            };
+        }
+    }
 
     let data = Data::new(State {
         pool,
         config: config.clone(),
-        storage: Arc::new(LocalStorage::new(PathBuf::from("content"))),
+        storage: Arc::new(storage),
     });
 
     let mut server = HttpServer::new(move || {

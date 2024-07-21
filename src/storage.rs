@@ -5,6 +5,7 @@ use actix_web::{
     http::header::ContentEncoding,
     Result,
 };
+use log::error;
 
 use crate::{
     data::{DataReader, DataWriter},
@@ -13,8 +14,10 @@ use crate::{
 
 pub trait StorageBackend {
     fn backend_id(&self) -> &'static str;
+    fn initialize(&self) -> Result<()>;
     fn save_content(&self, content: Content) -> Result<()>;
-    fn get_content(&self, key: &str) -> Result<Content>;
+    fn get_content(&self, key: &str, skip_content: bool) -> Result<Content>;
+    fn list_all_content(&self) -> Result<Vec<Content>>;
 }
 
 #[derive(Debug)]
@@ -33,14 +36,20 @@ impl StorageBackend for LocalStorage {
         "local"
     }
 
+    fn initialize(&self) -> Result<()> {
+        if !self.path.exists() {
+            fs::create_dir(&self.path)?;
+        }
+        Ok(())
+    }
+
     fn save_content(&self, content: Content) -> Result<()> {
         let content_data = content.content.ok_or_else(|| {
             ErrorInternalServerError("Tried saving content, but there's no content to save")
         })?;
 
-        if !self.path.exists() {
-            fs::create_dir(&self.path)?;
-        }
+        // Ensure we still have the data directory in case it got deleted for some reason
+        self.initialize()?;
 
         // Pre-compute length so we don't need to re-allocate
         let len = 4 // Version (int)
@@ -95,12 +104,13 @@ impl StorageBackend for LocalStorage {
         Ok(())
     }
 
-    fn get_content(&self, key: &str) -> Result<Content> {
+    fn get_content(&self, key: &str, skip_content: bool) -> Result<Content> {
         let data_path = self.path.join(key);
         if !data_path.exists() {
             return Err(ErrorNotFound("Invalid path"));
         }
 
+        // todo: don't read all file data if we're skipping the content
         let file_data = fs::read(data_path)?;
         let mut r = DataReader::new(&file_data);
 
@@ -141,7 +151,32 @@ impl StorageBackend for LocalStorage {
             content_encoding,
             backend_id: self.backend_id().to_string(),
             content_length,
-            content: Some(content),
+            content: if skip_content { None } else { Some(content) },
         })
+    }
+
+    fn list_all_content(&self) -> Result<Vec<Content>> {
+        Ok(fs::read_dir(&self.path)?
+            .filter_map(|x| {
+                if let Ok(path) = x {
+                    if path.path().is_file() {
+                        return path
+                            .path()
+                            .file_name()
+                            .map(|s| s.to_string_lossy().to_string());
+                    } else {
+                        return None;
+                    }
+                }
+                None
+            })
+            .filter_map(|key| match self.get_content(&key, true) {
+                Ok(content) => Some(content),
+                Err(err) => {
+                    error!("Failed to get content for paste {}: {}", key, err);
+                    None
+                }
+            })
+            .collect())
     }
 }
