@@ -1,5 +1,5 @@
 use actix_web::{
-    error::{ErrorBadRequest, ErrorInternalServerError, ErrorPayloadTooLarge},
+    error::{ErrorBadRequest, ErrorInternalServerError},
     http::header::{self, ContentEncoding},
     post,
     web::{self, Bytes, Data},
@@ -16,8 +16,6 @@ use crate::{
     State,
 };
 
-const MB_LEN: usize = 1024 * 1024;
-
 #[post("/post")]
 pub async fn post(
     state: Data<State>,
@@ -26,12 +24,6 @@ pub async fn post(
 ) -> Result<impl Responder, Error> {
     if bytes.is_empty() {
         return Err(ErrorBadRequest("Missing content"));
-    }
-
-    let len = bytes.len();
-
-    if len > state.config.content.maxsize * MB_LEN {
-        return Err(ErrorPayloadTooLarge("Content too large"));
     }
 
     let content_type = Some(req.content_type())

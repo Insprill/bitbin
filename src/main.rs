@@ -9,7 +9,12 @@ use std::{
     time::Duration,
 };
 
-use actix_web::{http::StatusCode, middleware, web::Data, App, HttpServer};
+use actix_web::{
+    http::StatusCode,
+    middleware,
+    web::{Data, PayloadConfig},
+    App, HttpServer,
+};
 use anyhow::{bail, Result};
 use config::HttpConfig;
 use log::{debug, error, info, warn, LevelFilter};
@@ -29,6 +34,8 @@ mod errors;
 mod get;
 mod post;
 mod storage;
+
+const MB_LEN: usize = 1024 * 1024;
 
 pub struct State {
     pool: Pool<SqliteConnectionManager>,
@@ -120,6 +127,7 @@ async fn start() -> Result<()> {
     let mut server = HttpServer::new(move || {
         App::new()
             .app_data(data.clone())
+            .app_data(PayloadConfig::new(config.content.maxsize * MB_LEN))
             .wrap(
                 middleware::ErrorHandlers::new()
                     .handler(StatusCode::INTERNAL_SERVER_ERROR, errors::handle_500),
