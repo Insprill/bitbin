@@ -19,9 +19,9 @@ flate2 = "1"
 log = "0.4"
 quote = "1"
 r2d2 = "0.8"
-r2d2_sqlite = "0.24"
+r2d2_sqlite = "0.28"
 random-string = "1"
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.35", features = ["bundled"] }
 rustls = "0.21" # Must stay compatible with the version actix-web is using.
 rustls-pemfile = "1"
 serde = { version = "1", features = ["derive"] }
