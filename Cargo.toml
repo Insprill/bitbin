@@ -14,6 +14,7 @@ actix-web = { version = "4", default-features = false, features = ["macros", "ht
 anyhow = "1"
 bytes = "1"
 dotenvy = "0.15"
+env_logger = "0.11"
 envy = "0.4"
 flate2 = "1"
 log = "0.4"
@@ -25,7 +26,6 @@ rusqlite = { version = "0.35", features = ["bundled"] }
 rustls = "0.21" # Must stay compatible with the version actix-web is using.
 rustls-pemfile = "1"
 serde = { version = "1", features = ["derive"] }
-simplelog = "0.12"
 syn = "2"
 toml = "0.8"
 

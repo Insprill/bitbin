@@ -17,12 +17,11 @@ use actix_web::{
 };
 use anyhow::{bail, Result};
 use config::HttpConfig;
-use log::{debug, error, info, warn, LevelFilter};
+use log::{debug, error, info, warn};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rustls::{Certificate, PrivateKey, ServerConfig as RustlsServerConfig};
 
-use simplelog::{ColorChoice, CombinedLogger, TermLogger, TerminalMode};
 use storage::StorageBackend;
 
 use crate::{config::Config, storage::LocalStorage};
@@ -52,20 +51,14 @@ async fn main() -> Result<()> {
 }
 
 async fn start() -> Result<()> {
-    CombinedLogger::init(vec![TermLogger::new(
-        LevelFilter::Info,
-        simplelog::Config::default(),
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )])
-    .unwrap();
-
     if let Ok(path) = dotenvy::dotenv() {
-        info!(
+        println!(
             "Loaded environment variables from {}",
             path.to_string_lossy()
         );
     }
+
+    env_logger::builder().format_target(false).init();
 
     let config = Config::create()?;
 
