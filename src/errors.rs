@@ -6,7 +6,7 @@ use log::error;
 pub fn handle_500<B>(res: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
     let err = get_err_str(&res);
     if let Some(str) = &err {
-        error!("{}", str);
+        error!("{str}");
     }
 
     Err(ErrorInternalServerError("Server error"))

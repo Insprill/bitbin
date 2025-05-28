@@ -81,7 +81,7 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
 }
 
 fn validate_path(path: &str) -> bool {
-    return path.chars().all(|c| c.is_ascii_alphanumeric());
+    path.chars().all(|c| c.is_ascii_alphanumeric())
 }
 
 fn get_accepted_encoding(req: &HttpRequest) -> String {

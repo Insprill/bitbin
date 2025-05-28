@@ -46,7 +46,7 @@ pub struct State {
 #[actix_web::main]
 async fn main() -> Result<()> {
     if let Err(err) = start().await {
-        error!("{:?}", err);
+        error!("{err:?}");
     }
     Ok(())
 }
@@ -102,7 +102,7 @@ async fn start() -> Result<()> {
         let all_content = match storage.list_all_content() {
             Ok(all_content) => all_content,
             Err(err) => {
-                error!("Failed to get content to recreate database! {}", err);
+                error!("Failed to get content to recreate database! {err}");
                 Vec::new()
             }
         };
@@ -176,7 +176,7 @@ fn create_cert_chain(config: &HttpConfig) -> Vec<Certificate> {
     let cert_file = &mut BufReader::new(match File::open(cert_file_path) {
         Ok(file) => file,
         Err(err) => {
-            error!("Failed to load cert file '{}': {}", cert_file_path, err);
+            error!("Failed to load cert file '{cert_file_path}': {err}");
             exit(1);
         }
     });
@@ -187,7 +187,7 @@ fn create_cert_chain(config: &HttpConfig) -> Vec<Certificate> {
         .map(Certificate)
         .collect();
     if cert_chain.is_empty() {
-        error!("Failed to find any certs in '{}'", cert_file_path);
+        error!("Failed to find any certs in '{cert_file_path}'");
         exit(1);
     }
     cert_chain
@@ -198,20 +198,17 @@ fn create_key(config: &HttpConfig) -> Vec<u8> {
     let key_file = &mut BufReader::new(match File::open(key_file_path) {
         Ok(file) => file,
         Err(err) => {
-            error!("Failed to load key file '{}': {}", key_file_path, err);
+            error!("Failed to load key file '{key_file_path}': {err}");
             exit(1);
         }
     });
     let mut keys: Vec<Vec<u8>> = rustls_pemfile::pkcs8_private_keys(key_file).unwrap();
     if keys.is_empty() {
-        error!("Failed to find any keys in '{}'", key_file_path);
+        error!("Failed to find any keys in '{key_file_path}'");
         exit(1);
     }
     if keys.len() > 1 {
-        warn!(
-            "Found multiple keys in '{}'! Only the first will be used.",
-            key_file_path
-        );
+        warn!("Found multiple keys in '{key_file_path}'! Only the first will be used.");
     }
 
     keys.remove(0)

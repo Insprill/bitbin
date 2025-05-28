@@ -89,9 +89,9 @@ impl Config {
     }
 
     fn from_env(prefix: &str) -> Result<(HttpConfig, MiscConfig, ContentConfig)> {
-        let http = envy::prefixed(format!("{}_HTTP_", prefix)).from_env::<HttpConfig>()?;
-        let misc = envy::prefixed(format!("{}_MISC_", prefix)).from_env::<MiscConfig>()?;
-        let content = envy::prefixed(format!("{}_CONTENT_", prefix)).from_env::<ContentConfig>()?;
+        let http = envy::prefixed(format!("{prefix}_HTTP_")).from_env::<HttpConfig>()?;
+        let misc = envy::prefixed(format!("{prefix}_MISC_")).from_env::<MiscConfig>()?;
+        let content = envy::prefixed(format!("{prefix}_CONTENT_")).from_env::<ContentConfig>()?;
         Ok((http, misc, content))
     }
 }

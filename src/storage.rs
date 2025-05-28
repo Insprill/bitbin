@@ -173,7 +173,7 @@ impl StorageBackend for LocalStorage {
             .filter_map(|key| match self.get_content(&key, true) {
                 Ok(content) => Some(content),
                 Err(err) => {
-                    error!("Failed to get content for paste {}: {}", key, err);
+                    error!("Failed to get content for paste {key}: {err}");
                     None
                 }
             })
