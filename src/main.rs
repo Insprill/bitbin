@@ -121,7 +121,9 @@ async fn start() -> Result<()> {
     let mut server = HttpServer::new(move || {
         App::new()
             .app_data(data.clone())
-            .app_data(PayloadConfig::new(config.content.maxsize * MB_LEN))
+            .app_data(PayloadConfig::new(
+                (config.content.maxsize * MB_LEN).min(i32::MAX as usize),
+            ))
             .wrap(
                 middleware::ErrorHandlers::new()
                     .handler(StatusCode::INTERNAL_SERVER_ERROR, errors::handle_500),
