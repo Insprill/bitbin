@@ -20,6 +20,23 @@ pub struct Content {
     pub content: Option<Vec<u8>>,
 }
 
+impl Content {
+    pub fn clone_metadata(&self) -> Content {
+        Content {
+            key: self.key.clone(),
+            content_type: self.content_type.clone(),
+            expiry: self.expiry,
+            last_modified: self.last_modified,
+            modifiable: self.modifiable,
+            auth_key: self.auth_key.clone(),
+            content_encoding: self.content_encoding.clone(),
+            backend_id: self.backend_id.clone(),
+            content_length: self.content_length,
+            content: None,
+        }
+    }
+}
+
 pub fn create_db(conn: Connection) -> Result<usize> {
     Ok(conn.execute(
         "CREATE TABLE `content` (
@@ -41,7 +58,7 @@ pub async fn save_content_info(pool: &Pool, content: &Content) -> Result<usize> 
 
     let conn = web::block(move || pool.get()).await??;
 
-    let content = content.clone();
+    let content = content.clone_metadata();
 
     web::block(move || {
         // INSERT INTO content VALUES('2TIzc','text/plain',NULL,1721160516802,'gzip','local',157);
