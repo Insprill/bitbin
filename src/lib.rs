@@ -1,15 +1,15 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
 #[proc_macro_derive(CopyNonDefaults)]
 pub fn copy_non_defaults_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    let gen = match input.data {
+    let generated = match input.data {
         Data::Struct(ref data) => {
             let fields = match &data.fields {
-                Fields::Named(ref fields_named) => &fields_named.named,
+                Fields::Named(fields_named) => &fields_named.named,
                 Fields::Unnamed(_) => panic!("Unnamed fields are not supported"),
                 Fields::Unit => panic!("Unit structs are not supported"),
             };
@@ -37,5 +37,5 @@ pub fn copy_non_defaults_derive(input: TokenStream) -> TokenStream {
         }
         _ => panic!("CopyNonDefaults can only be derived for structs"),
     };
-    gen.into()
+    generated.into()
 }

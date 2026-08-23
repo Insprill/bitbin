@@ -1,6 +1,6 @@
 use actix_web::web;
 use anyhow::Result;
-use rusqlite::{types::Null, OptionalExtension};
+use rusqlite::{OptionalExtension, types::Null};
 use serde::{Deserialize, Serialize};
 
 pub type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
@@ -16,7 +16,7 @@ pub struct Content {
     pub auth_key: Option<String>,
     pub content_encoding: String,
     pub backend_id: String,
-    pub content_length: usize,
+    pub content_length: i32,
     pub content: Option<Vec<u8>>,
 }
 

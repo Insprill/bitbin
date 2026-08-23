@@ -1,6 +1,7 @@
 use actix_web::{
-    http::{header, Error},
-    route, HttpResponse, Responder,
+    HttpResponse, Responder,
+    http::{Error, header},
+    route,
 };
 
 #[route("/health", method = "GET", method = "HEAD")]

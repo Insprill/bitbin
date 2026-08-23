@@ -10,12 +10,12 @@ use std::{
 };
 
 use actix_web::{
+    App, HttpServer,
     http::StatusCode,
     middleware,
     web::{Data, PayloadConfig},
-    App, HttpServer,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use config::HttpConfig;
 use log::{debug, error, info, warn};
 use r2d2::Pool;

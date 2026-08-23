@@ -1,19 +1,19 @@
 use actix_web::{
+    Error, HttpMessage, HttpRequest, HttpResponse, Responder,
     error::{ErrorBadRequest, ErrorInternalServerError},
     http::header::{self, ContentEncoding},
     post,
     web::{self, Bytes, Data},
-    Error, HttpMessage, HttpRequest, HttpResponse, Responder,
 };
 use anyhow::Result;
-use flate2::write::GzEncoder;
 use flate2::Compression;
+use flate2::write::GzEncoder;
 use serde::Serialize;
 use std::{io::prelude::*, time::SystemTime};
 
 use crate::{
-    db::{self, Content},
     State,
+    db::{self, Content},
 };
 
 #[post("/post")]
@@ -87,7 +87,7 @@ pub async fn post(
         auth_key: None,
         content_encoding: content_encoding.join(","),
         backend_id: state.storage.backend_id().to_string(),
-        content_length: bytes.len(),
+        content_length: bytes.len() as i32,
         content: Some(bytes),
     };
 

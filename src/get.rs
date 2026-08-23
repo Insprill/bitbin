@@ -1,5 +1,9 @@
 use actix_web::{
-    Error, HttpRequest, HttpResponse, Responder, error::{ErrorInternalServerError, ErrorNotAcceptable, ErrorNotFound}, get, http::header::{self, ContentEncoding}, route, web::{self, Bytes, Data},
+    Error, HttpRequest, HttpResponse, Responder,
+    error::{ErrorInternalServerError, ErrorNotAcceptable, ErrorNotFound},
+    get,
+    http::header::{self, ContentEncoding},
+    web::{self, Bytes, Data},
 };
 use anyhow::Result;
 use flate2::read::GzDecoder;
@@ -7,8 +11,8 @@ use log::warn;
 use std::io::prelude::*;
 
 use crate::{
-    db::{self, Content},
     State,
+    db::{self, Content},
 };
 
 const CACHE_CONTROL_STATIC: &str = "public, max-age=604800, no-transform, immutable";
@@ -55,7 +59,10 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
     }
 
     if content.content_encoding == ContentEncoding::Gzip.as_str() {
-        warn!("[REQUEST] Request for 'key = {}' was made with incompatible Accept-Encoding headers! Content-Encoding = {}, Accept-Encoding = {}", key, content.content_encoding, accept_encoding);
+        warn!(
+            "[REQUEST] Request for 'key = {}' was made with incompatible Accept-Encoding headers! Content-Encoding = {}, Accept-Encoding = {}",
+            key, content.content_encoding, accept_encoding
+        );
         let content_data = web::block(move || {
             let mut gz = GzDecoder::new(content_data.as_slice());
             let mut s = Vec::new();

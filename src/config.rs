@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use bitbin::CopyNonDefaults;
 use std::{fs, path::Path};
 

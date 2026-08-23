@@ -1,5 +1,5 @@
 use actix_web::{
-    dev::ServiceResponse, error::ErrorInternalServerError, middleware::ErrorHandlerResponse, Result,
+    Result, dev::ServiceResponse, error::ErrorInternalServerError, middleware::ErrorHandlerResponse,
 };
 use log::error;
 

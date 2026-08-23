@@ -1,9 +1,9 @@
 use std::{fs, path::PathBuf};
 
 use actix_web::{
+    Result,
     error::{ErrorInternalServerError, ErrorNotFound},
     http::header::ContentEncoding,
-    Result,
 };
 use log::error;
 
@@ -90,8 +90,8 @@ impl StorageBackend for LocalStorage {
         // Content Encoding
         w.write_utf_long(&content.content_encoding)?;
 
-        w.write_int_from_usize(content_data.len())?;
-
+        // Content
+        w.write_int(content.content_length);
         w.write_slice(&content_data);
 
         let data_path = self.path.join(content.key);
@@ -137,8 +137,8 @@ impl StorageBackend for LocalStorage {
             r.read_utf_long()?
         };
 
-        let content_length: usize = r.read_int_as_usize()?;
-        let mut content = vec![0u8; content_length];
+        let content_length = r.read_int();
+        let mut content = vec![0u8; content_length as usize];
         r.read_fully(&mut content)?;
 
         Ok(Content {

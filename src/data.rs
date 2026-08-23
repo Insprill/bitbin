@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use actix_web::{error::ErrorInternalServerError, web::Buf, Result};
+use actix_web::{Result, error::ErrorInternalServerError, web::Buf};
 use bytes::{BufMut, Bytes, BytesMut};
 
 pub struct DataReader<'a> {
@@ -14,10 +14,6 @@ impl<'a> DataReader<'a> {
 
     pub fn read_int(&mut self) -> i32 {
         self.buf.get_i32()
-    }
-
-    pub fn read_int_as_usize(&mut self) -> Result<usize> {
-        self.read_int().try_into().map_err(ErrorInternalServerError)
     }
 
     pub fn read_long(&mut self) -> i64 {
@@ -39,8 +35,8 @@ impl<'a> DataReader<'a> {
     }
 
     pub fn read_utf_long(&mut self) -> Result<String> {
-        let len = self.read_int_as_usize()?;
-        self.read_utf_of_len(len)
+        let len = self.read_int();
+        self.read_utf_of_len(len as usize)
     }
 
     pub fn read_utf_of_len(&mut self, len: usize) -> Result<String> {
@@ -65,12 +61,6 @@ impl DataWriter {
         self.buf.put_i32(value);
     }
 
-    pub fn write_int_from_usize(&mut self, value: usize) -> Result<()> {
-        self.buf
-            .put_i32(value.try_into().map_err(ErrorInternalServerError)?);
-        Ok(())
-    }
-
     pub fn write_long(&mut self, value: i64) {
         self.buf.put_i64(value);
     }
@@ -91,6 +81,7 @@ impl DataWriter {
     }
 
     pub fn write_utf(&mut self, value: &str) -> Result<()> {
+        // https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/io/DataOutputStream.html#writeUTF(java.lang.String)
         self.buf
             .put_u16(value.len().try_into().map_err(ErrorInternalServerError)?);
         self.buf.put_slice(value.as_bytes());

@@ -4,7 +4,7 @@ description = "An (almost) drop-in replacement for bytebin written in Rust."
 version = "0.1.0"
 license = "AGPL-3.0"
 repository = "https://github.com/Insprill/bitbin"
-edition = "2021"
+edition = "2024"
 
 [lib]
 proc-macro = true
@@ -20,14 +20,14 @@ flate2 = "1"
 log = "0.4"
 quote = "1"
 r2d2 = "0.8"
-r2d2_sqlite = "0.28"
+r2d2_sqlite = "0.35"
 random-string = "1"
-rusqlite = { version = "0.35", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 rustls = "0.21" # Must stay compatible with the version actix-web is using.
 rustls-pemfile = "1"
 serde = { version = "1", features = ["derive"] }
-syn = "2"
-toml = "0.8"
+syn = "3"
+toml = "1"
 
 [profile.release]
 panic = "abort"
