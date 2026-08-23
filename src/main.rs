@@ -31,6 +31,7 @@ mod data;
 mod db;
 mod errors;
 mod get;
+mod health;
 mod post;
 mod storage;
 
@@ -126,6 +127,7 @@ async fn start() -> Result<()> {
                     .handler(StatusCode::INTERNAL_SERVER_ERROR, errors::handle_500),
             )
             // Routes
+            .service(health::health)
             .service(post::post)
             .service(get::get)
     });
