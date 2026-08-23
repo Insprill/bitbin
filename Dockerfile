@@ -23,7 +23,7 @@ COPY --from=builder /bitbin/target/release/bitbin .
 RUN mkdir content db
 VOLUME ["/opt/bitbin/content", "/opt/bitbin/db"]
 
-HEALTHCHECK --interval=1m --timeout=3s --start-period=3s CMD wget --spider -q http://localhost:8080/health || exit 1
+HEALTHCHECK --interval=1m --timeout=5s CMD wget --spider -q http://localhost:8080/health || exit 1
 
 EXPOSE 8080/tcp
 CMD ["./bitbin"]
