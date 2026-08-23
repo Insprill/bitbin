@@ -48,7 +48,7 @@ pub async fn get(state: Data<State>, req: HttpRequest) -> Result<impl Responder,
 
     let mut res = HttpResponse::Ok();
     res.insert_header((header::LAST_MODIFIED, content.last_modified));
-    res.insert_header((header::CONTENT_TYPE, content.content_type.clone()));
+    res.insert_header((header::CONTENT_TYPE, content.content_type.as_str()));
     res.insert_header((header::CACHE_CONTROL, cache_control));
 
     let accept_encoding = get_accepted_encoding(&req);
