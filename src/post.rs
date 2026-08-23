@@ -56,11 +56,9 @@ pub async fn post(
         })
         .unwrap_or_default();
 
-    let mut bytes: Vec<u8> = bytes.into();
-
     let compression_level = state.config.content.gzip_compression_level;
-    if content_encoding.is_empty() {
-        bytes = web::block(move || {
+    let bytes = if content_encoding.is_empty() {
+        let compressed = web::block(move || {
             let mut gz = GzEncoder::new(Vec::new(), Compression::new(compression_level));
             match gz.write_all(&bytes) {
                 Ok(_) => Ok(gz.finish()),
@@ -69,7 +67,10 @@ pub async fn post(
         })
         .await???;
         content_encoding = vec![ContentEncoding::Gzip.as_str().to_string()];
-    }
+        compressed
+    } else {
+        bytes.into()
+    };
 
     let last_modified: i64 = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
