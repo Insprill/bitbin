@@ -59,7 +59,7 @@ impl StorageBackend for LocalStorage {
         + 8 // Last Modified (long)
         + 1 // Is Modifiable (bool)
         + if content.modifiable { 2 } else { 0 }  // Auth Key (ushort string)
-        + 4 // Content Encoding (int string)
+        + 4 + content.content_encoding.len() // Content Encoding (int string)
         + 4 // Content Length (int)
         + content_data.len(); // Content
         let mut w = DataWriter::new(len);
